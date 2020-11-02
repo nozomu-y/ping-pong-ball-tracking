@@ -1,0 +1,6 @@
+*.mp4
+*.avi
+compile_commands.json
+Makefile
+.DS_Store
+.clangd/

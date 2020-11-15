@@ -7,6 +7,16 @@
 using namespace std;
 using namespace cv;
 
+Mat projMatr1 = (Mat_<double>(3, 4) << 1.10082917e+03, 0.00000000e+00,
+                 6.24244764e+02, 0.00000000e+00, 0.00000000e+00, 1.09806264e+03,
+                 3.33867362e+02, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+                 1.00000000e+00, 0.00000000e+00);
+Mat projMatr2 =
+    (Mat_<double>(3, 4) << 1.09206116e+03, 7.00301809e+00, 6.39421445e+02,
+     -8.03761654e+03, 1.75020071e+00, 1.10479669e+03, 3.10853998e+02,
+     3.00618340e+02, -1.38470270e-02, 2.09410228e-02, 9.99684811e-01,
+     2.32549042e-01);
+
 Mat frame_l, frame_r;
 vector<Point2f> trace_l;
 vector<Point2f> trace_r;
@@ -82,6 +92,22 @@ int main() {
 
         th_l.join();
         th_r.join();
+
+        // triangulation
+        if (!isnan(trace_l.back().x) && !isnan(trace_l.back().y) &&
+            !isnan(trace_r.back().x) && !isnan(trace_r.back().y)) {
+            Mat point4D, point3D;
+            vector<Point2d> projPoints1{trace_l.back()};
+            vector<Point2d> projPoints2{trace_r.back()};
+            triangulatePoints(projMatr1, projMatr2, projPoints1, projPoints2,
+                              point4D);
+            convertPointsFromHomogeneous(point4D.reshape(4), point3D);
+            point3D *= 0.035;
+            cout << fixed << setprecision(4) << showpos
+                 << "x:" << point3D.at<double>(0, 0)
+                 << " y:" << point3D.at<double>(0, 1)
+                 << " z:" << point3D.at<double>(0, 2) << endl;
+        }
 
         resizeWindow("Left", 640, 360);
         resizeWindow("Right", 640, 360);

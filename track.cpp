@@ -35,6 +35,13 @@ bool frame_l_ready = false;
 bool coord_r_ready = false;
 bool coord_l_ready = false;
 
+int hueMin = 70;
+int hueMax = 120;
+int saturationMin = 90;
+int saturationMax = 255;
+int brightnessMin = 150;
+int brightnessMax = 255;
+
 void Thread_split() {
     while (1) {
         std::chrono::system_clock::time_point start =
@@ -88,20 +95,9 @@ void Thread_l() {
 
         // search the ball
         cv::Mat diff_frame = cv::Mat::ones(height, width / 2, CV_8U);
-        for (int y = 0; y < hsv_frame.rows; y++) {
-            for (int x = 0; x < hsv_frame.cols; x++) {
-                int hue, sat, val;
-                hue = hsv_frame.at<cv::Vec3b>(y, x)[0];
-                sat = hsv_frame.at<cv::Vec3b>(y, x)[1];
-                val = hsv_frame.at<cv::Vec3b>(y, x)[2];
-                if ((hue >= 70 && hue <= 120) && (sat >= 90 && sat <= 255) &&
-                    (val >= 150 && val <= 255)) {
-                    diff_frame.at<uchar>(y, x) = 255;
-                } else {
-                    diff_frame.at<uchar>(y, x) = 0;
-                }
-            }
-        }
+        cv::inRange(
+            hsv_frame, cv::Scalar(hueMin, saturationMin, brightnessMin, 0),
+            cv::Scalar(hueMax, saturationMax, brightnessMax, 0), diff_frame);
         cv::dilate(diff_frame, diff_frame, cv::Mat(), cv::Point(-1, -1), 1);
 
         // calculate the coordinate of the ball
@@ -142,20 +138,9 @@ void Thread_r() {
 
         // search the ball
         cv::Mat diff_frame = cv::Mat::ones(height, width / 2, CV_8U);
-        for (int y = 0; y < hsv_frame.rows; y++) {
-            for (int x = 0; x < hsv_frame.cols; x++) {
-                int hue, sat, val;
-                hue = hsv_frame.at<cv::Vec3b>(y, x)[0];
-                sat = hsv_frame.at<cv::Vec3b>(y, x)[1];
-                val = hsv_frame.at<cv::Vec3b>(y, x)[2];
-                if ((hue >= 70 && hue <= 120) && (sat >= 90 && sat <= 255) &&
-                    (val >= 150 && val <= 255)) {
-                    diff_frame.at<uchar>(y, x) = 255;
-                } else {
-                    diff_frame.at<uchar>(y, x) = 0;
-                }
-            }
-        }
+        cv::inRange(
+            hsv_frame, cv::Scalar(hueMin, saturationMin, brightnessMin, 0),
+            cv::Scalar(hueMax, saturationMax, brightnessMax, 0), diff_frame);
         cv::dilate(diff_frame, diff_frame, cv::Mat(), cv::Point(-1, -1), 1);
 
         // calculate the coordinate of the ball

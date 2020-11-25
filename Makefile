@@ -7,6 +7,9 @@ split_video: split_video.cpp
 track: track.cpp
 	$(CC) $(CFLAGS) track.cpp -o track
 
+track_single: track_single.cpp
+	$(CC) $(CFLAGS) track_single.cpp -o track_single
+
 track_ans: track_ans.cpp
 	$(CC) $(CFLAGS) track_ans.cpp -o track_ans
 

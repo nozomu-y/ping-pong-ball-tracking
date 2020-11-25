@@ -48,7 +48,7 @@ void Thread_split() {
             std::chrono::system_clock::now();
         cap >> frame;
         if (frame.empty() == true) {
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000 / fps));
             std::exit(0);
         }
 
@@ -75,16 +75,12 @@ void Thread_split() {
         if (1000 / fps - elapsed > 0) {
             std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
         }
-        // std::cout << sleep << std::endl;
-        // std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 }
 
 void Thread_l() {
     cv::Mat hsv_frame;
     while (1) {
-        // std::chrono::system_clock::time_point start =
-        // std::chrono::system_clock::now();
         {
             std::unique_lock<std::mutex> uniq_lk(mtx_frame_l);
             cv_frame_l.wait(uniq_lk, [] { return frame_l_ready; });
@@ -109,25 +105,12 @@ void Thread_l() {
             coord_l_ready = true;
         }
         cv_coord_l.notify_one();
-
-        // std::chrono::system_clock::time_point end =
-        // std::chrono::system_clock::now();
-        // double elapsed =
-        // std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-        // .count();
-        // int sleep = 1000 / fps - elapsed;
-        // if (1000 / fps - elapsed > 0) {
-        // std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
-        // }
-        // std::cout << "left: " << sleep << std::endl;
     }
 }
 
 void Thread_r() {
     cv::Mat hsv_frame;
     while (1) {
-        // std::chrono::system_clock::time_point start =
-        // std::chrono::system_clock::now();
         {
             std::unique_lock<std::mutex> uniq_lk(mtx_frame_r);
             cv_frame_r.wait(uniq_lk, [] { return frame_r_ready; });
@@ -152,25 +135,12 @@ void Thread_r() {
             coord_r_ready = true;
         }
         cv_coord_r.notify_one();
-
-        // std::chrono::system_clock::time_point end =
-        // std::chrono::system_clock::now();
-        // double elapsed =
-        // std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-        // .count();
-        // int sleep = 1000 / fps - elapsed;
-        // if (1000 / fps - elapsed > 0) {
-        // std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
-        // }
-        // std::cout << "right: " << sleep << std::endl;
     }
 }
 
 void Thread_triangulation() {
     cv::Mat point4D, point3D;
     while (1) {
-        // std::chrono::system_clock::time_point start =
-        // std::chrono::system_clock::now();
         {
             std::unique_lock<std::mutex> uniq_lk_l(mtx_coord_l);
             std::unique_lock<std::mutex> uniq_lk_r(mtx_coord_r);
@@ -195,17 +165,6 @@ void Thread_triangulation() {
                   << "x:" << point3D.at<double>(0, 0)
                   << " y:" << point3D.at<double>(0, 1)
                   << " z:" << point3D.at<double>(0, 2) << std::endl;
-
-        // std::chrono::system_clock::time_point end =
-        // std::chrono::system_clock::now();
-        // double elapsed =
-        // std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-        // .count();
-        // int sleep = 1000 / fps - elapsed;
-        // if (1000 / fps - elapsed > 0) {
-        // std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
-        // }
-        // std::cout << "triangulation: " << sleep << std::endl;
     }
 }
 

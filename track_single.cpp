@@ -41,9 +41,10 @@ int main() {
     std::vector<cv::Point2f> track_l;
     std::vector<cv::Point2f> track_r;
 
+    int FOURCC = cv::VideoWriter::fourcc('M', 'P', '4', 'V');
+    cv::VideoWriter vw("track.mp4", FOURCC, fps, cv::Size(width, height), 1);
+
     while (1) {
-        // std::chrono::system_clock::time_point start =
-        // std::chrono::system_clock::now();
         cv::Mat frame;
         cap >> frame;
         if (frame.empty() == true) break;
@@ -106,24 +107,19 @@ int main() {
                                   projPoints2, point4D);
             cv::convertPointsFromHomogeneous(point4D.reshape(4), point3D);
             point3D *= 0.035;
-            std::cout << std::fixed << std::setprecision(4) << std::showpos
-                      << "x:" << point3D.at<double>(0, 0)
-                      << " y:" << point3D.at<double>(0, 1)
-                      << " z:" << point3D.at<double>(0, 2) << std::endl;
+            printf("x:%+.4f y:%+.4f z:%+.4f\n", point3D.at<double>(0, 0),
+                   point3D.at<double>(0, 1), point3D.at<double>(0, 2));
         }
         cv::resizeWindow("Left", 640, 360);
         cv::resizeWindow("Right", 640, 360);
         cv::imshow("Left", frame_l);
         cv::imshow("Right", frame_r);
 
-        // std::chrono::system_clock::time_point end =
-        // std::chrono::system_clock::now();
-        // double elapsed =
-        // std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-        // .count();
-        // if (1000 / fps - elapsed > 0) {
-        // cv::waitKey(1000 / fps - elapsed);
-        // }
+        cv::Mat frame_out;
+        cv::Mat frames[] = {frame_l, frame_r};
+        cv::hconcat(frames, 2, frame_out);
+        vw << frame_out;
+
         cv::waitKey(1000 / fps);
     }
 

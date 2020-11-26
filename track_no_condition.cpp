@@ -1,5 +1,4 @@
 #include <chrono>
-#include <condition_variable>
 #include <ctime>
 #include <iostream>
 #include <mutex>
@@ -29,8 +28,6 @@ cv::Mat projMatr2 =
 
 std::mutex mtx_frame_r, mtx_frame_l;
 std::mutex mtx_coord_l, mtx_coord_r;
-std::condition_variable cv_frame_r, cv_frame_l;
-std::condition_variable cv_coord_l, cv_coord_r;
 bool frame_r_ready = false;
 bool frame_l_ready = false;
 bool coord_r_ready = false;
@@ -49,7 +46,7 @@ void Thread_split() {
             std::chrono::system_clock::now();
         cap >> frame;
         if (frame.empty() == true) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000 / fps));
+            std::this_thread::sleep_for(std::chrono::seconds(3));
             std::exit(0);
         }
 
@@ -60,12 +57,9 @@ void Thread_split() {
             frame_l = frame(cv::Rect(0, 0, frame.cols / 2, frame.rows));
             frame_r =
                 frame(cv::Rect(frame.cols / 2, 0, frame.cols / 2, frame.rows));
-
             frame_l_ready = true;
             frame_r_ready = true;
         }
-        cv_frame_l.notify_one();
-        cv_frame_r.notify_one();
 
         std::chrono::system_clock::time_point end =
             std::chrono::system_clock::now();
@@ -81,11 +75,13 @@ void Thread_split() {
 
 void Thread_l() {
     cv::Mat hsv_frame;
+    while (!frame_l_ready)
+        ;
     while (1) {
+        std::chrono::system_clock::time_point start =
+            std::chrono::system_clock::now();
         {
-            std::unique_lock<std::mutex> uniq_lk(mtx_frame_l);
-            cv_frame_l.wait(uniq_lk, [] { return frame_l_ready; });
-            frame_l_ready = false;
+            std::lock_guard<std::mutex> lock(mtx_frame_l);
             // convert to HSV
             cv::cvtColor(frame_l, hsv_frame, cv::COLOR_RGB2HSV);
         }
@@ -105,17 +101,28 @@ void Thread_l() {
             coord_l = mc;
             coord_l_ready = true;
         }
-        cv_coord_l.notify_one();
+
+        std::chrono::system_clock::time_point end =
+            std::chrono::system_clock::now();
+        double elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+                .count();
+        int sleep = 1000 / fps - elapsed;
+        if (1000 / fps - elapsed > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
+        }
     }
 }
 
 void Thread_r() {
     cv::Mat hsv_frame;
+    while (!frame_r_ready)
+        ;
     while (1) {
+        std::chrono::system_clock::time_point start =
+            std::chrono::system_clock::now();
         {
-            std::unique_lock<std::mutex> uniq_lk(mtx_frame_r);
-            cv_frame_r.wait(uniq_lk, [] { return frame_r_ready; });
-            frame_r_ready = false;
+            std::lock_guard<std::mutex> lock(mtx_frame_r);
             // convert to HSV
             cv::cvtColor(frame_r, hsv_frame, cv::COLOR_RGB2HSV);
         }
@@ -135,20 +142,29 @@ void Thread_r() {
             coord_r = mc;
             coord_r_ready = true;
         }
-        cv_coord_r.notify_one();
+
+        std::chrono::system_clock::time_point end =
+            std::chrono::system_clock::now();
+        double elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+                .count();
+        int sleep = 1000 / fps - elapsed;
+        if (1000 / fps - elapsed > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
+        }
     }
 }
 
 void Thread_triangulation() {
     cv::Mat point4D, point3D;
+    while (!coord_l_ready || !coord_r_ready)
+        ;
     while (1) {
+        std::chrono::system_clock::time_point start =
+            std::chrono::system_clock::now();
         {
-            std::unique_lock<std::mutex> uniq_lk_l(mtx_coord_l);
-            std::unique_lock<std::mutex> uniq_lk_r(mtx_coord_r);
-            cv_coord_l.wait(uniq_lk_l, [] { return coord_l_ready; });
-            cv_coord_r.wait(uniq_lk_r, [] { return coord_r_ready; });
-            coord_l_ready = false;
-            coord_r_ready = false;
+            std::lock_guard<std::mutex> lock_l(mtx_coord_l);
+            std::lock_guard<std::mutex> lock_r(mtx_coord_r);
 
             if (isnan(coord_l.x) || isnan(coord_l.y) || isnan(coord_r.x) ||
                 isnan(coord_r.y))
@@ -164,6 +180,15 @@ void Thread_triangulation() {
         point3D *= 0.035;
         printf("x:%+.4f y:%+.4f z:%+.4f\n", point3D.at<double>(0, 0),
                point3D.at<double>(0, 1), point3D.at<double>(0, 2));
+        std::chrono::system_clock::time_point end =
+            std::chrono::system_clock::now();
+        double elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+                .count();
+        int sleep = 1000 / fps - elapsed;
+        if (1000 / fps - elapsed > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
+        }
     }
 }
 

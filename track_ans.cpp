@@ -1,4 +1,5 @@
 #include <chrono>
+#include <condition_variable>
 #include <iostream>
 #include <mutex>
 #include <opencv2/opencv.hpp>
@@ -26,6 +27,16 @@ std::vector<cv::Point2f> trace_l;
 std::vector<cv::Point2f> trace_r;
 int height, width, fps;
 bool frame_ready, position_ready1, position_ready2;
+
+void Thread_split() {
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        frame_l = frame(cv::Rect(0, 0, frame.cols / 2, frame.rows));
+        frame_r =
+            frame(cv::Rect(frame.cols / 2, 0, frame.cols / 2, frame.rows));
+    }
+    frame_ready = true;
+}
 
 void trace_ball(cv::Mat frame_half, std::vector<cv::Point2f>& trace) {
     // convert to HSV
@@ -63,39 +74,20 @@ void Thread_l() {
     while (!frame_ready)
         ;
     {
-        // std::cout << "trace_l:try" << std::endl;
         std::lock_guard<std::mutex> lock(mtx);
-        // std::cout << "trace_l:enter" << std::endl;
         trace_ball(frame_l, trace_l);
     }
     position_ready1 = true;
-    // std::cout << "trace_l:exit" << std::endl;
 }
 
 void Thread_r() {
     while (!frame_ready)
         ;
     {
-        // std::cout << "trace_r:try" << std::endl;
         std::lock_guard<std::mutex> lock(mtx);
-        // std::cout << "trace_r:enter" << std::endl;
         trace_ball(frame_r, trace_r);
     }
     position_ready2 = true;
-    // std::cout << "trace_r:exit" << std::endl;
-}
-
-void Thread_split() {
-    {
-        // std::cout << "split:try" << std::endl;
-        std::lock_guard<std::mutex> lock(mtx);
-        // std::cout << "split:lock" << std::endl;
-        frame_l = frame(cv::Rect(0, 0, frame.cols / 2, frame.rows));
-        frame_r =
-            frame(cv::Rect(frame.cols / 2, 0, frame.cols / 2, frame.rows));
-    }
-    // std::cout << "split:exit" << std::endl;
-    frame_ready = true;
 }
 
 void Thread_triangulation() {
@@ -112,10 +104,8 @@ void Thread_triangulation() {
                                   projPoints2, point4D);
             cv::convertPointsFromHomogeneous(point4D.reshape(4), point3D);
             point3D *= 0.035;
-            std::cout << std::fixed << std::setprecision(4) << std::showpos
-                      << "x:" << point3D.at<double>(0, 0)
-                      << " y:" << point3D.at<double>(0, 1)
-                      << " z:" << point3D.at<double>(0, 2) << std::endl;
+            printf("x:%+.4f y:%+.4f z:%+.4f\n", point3D.at<double>(0, 0),
+                   point3D.at<double>(0, 1), point3D.at<double>(0, 2));
         }
     }
 }
